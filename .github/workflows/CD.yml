@@ -1,4 +1,4 @@
-name: CD
+﻿name: CD
 
 on:
   workflow_run:
@@ -16,8 +16,9 @@ jobs:
 
       - name: Set image version
         run: |
+          IMAGE=$(grep -m1 'IMAGE:' .github/workflows/CI.yml | awk '{print $2}')
           VERSION=$(grep -m1 'VERSION:' .github/workflows/CI.yml | awk '{print $2}')
-          sed -i "s|IMAGE_PLACEHOLDER|${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:$VERSION|" k8s/deployment.yaml
+          sed -i -E "s|^(\s*image:\s*).*|\1$IMAGE:$VERSION|" k8s/deployment.yaml
           grep 'image:' k8s/deployment.yaml
 
       - name: Deploy to Kubernetes
@@ -26,9 +27,9 @@ jobs:
           kubectl apply -f k8s/service.yaml
 
       - name: Wait for rolling update
-        run: kubectl rollout status deployment/weather-ml-app --timeout=180s
+        run: kubectl rollout status deployment/weather-ml-app --timeout=300s
 
       - name: Show pods and service
         run: |
           kubectl get pods -l app=weather-ml-app
-          kubectl get service weather-ml-app
+          kubectl get service weather-ml-app-service
